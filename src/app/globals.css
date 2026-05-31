@@ -1,26 +1,85 @@
 @import "tailwindcss";
 
+/* ============================================================
+   Fluxa Bank Ops — design tokens (from Fraud Review Center design)
+   ============================================================ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --brand-primary: #4F46E5;
+  --brand-primary-hover: #4338CA;
+  --brand-primary-soft: #EEF2FF;
+
+  --bg-canvas: #F8FAFC;
+  --bg-surface: #FFFFFF;
+  --bg-surface-2: #F1F5F9;
+  --bg-sidebar: #1A1830;
+  --bg-sidebar-hover: #272343;
+  --bg-sidebar-active: #3730A3;
+  --sidebar-border: #2A2745;
+  --sidebar-section: #716DA0;
+  --sidebar-active-icon: #C7D2FE;
+
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-tertiary: #94A3B8;
+  --text-on-dark: #F1F5F9;
+  --text-on-dark-muted: #94A3B8;
+
+  --border-default: #E2E8F0;
+  --border-strong: #CBD5E1;
+  --border-focus: #4F46E5;
+
+  --sev-critical: #DC2626;
+  --sev-high: #F97316;
+  --sev-medium: #F59E0B;
+  --sev-low: #64748B;
+
+  --txn-held: #F59E0B;
+  --txn-approved: #10B981;
+  --txn-released: #3B82F6;
+  --txn-rejected: #DC2626;
+  --txn-pending: #94A3B8;
+
+  --sla-healthy: #10B981;
+  --sla-atrisk: #F59E0B;
+  --sla-breached: #DC2626;
+
+  --soft-critical: #FEF2F2;
+  --soft-high: #FFF7ED;
+  --soft-amber: #FFFBEB;
+  --soft-emerald: #ECFDF5;
+  --soft-blue: #EFF6FF;
+  --soft-slate: #F1F5F9;
+
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-pop: 0 8px 24px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.08);
+  --shadow-up: 0 -6px 16px rgba(15, 23, 42, 0.06);
+
+  --radius-chip: 4px;
+  --radius-default: 6px;
+  --radius-card: 8px;
+  --radius-modal: 12px;
+
+  --font-ui: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; font-family: var(--font-ui); font-size: 14px; color: var(--text-primary); background: var(--bg-canvas); -webkit-font-smoothing: antialiased; }
+#root { height: 100%; }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.t-caption { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
+:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; border-radius: 3px; }
+
+.scroll-y { overflow-y: auto; overflow-x: hidden; }
+.scroll-y::-webkit-scrollbar { width: 10px; }
+.scroll-y::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 8px; border: 3px solid transparent; background-clip: content-box; }
+.scroll-y::-webkit-scrollbar-track { background: transparent; }
+
+.kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; font-family: var(--font-mono); font-size: 11px; font-weight: 500; border-radius: 4px; border: 1px solid currentColor; opacity: 0.55; }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sla-healthy); animation: flux-pulse 2s ease-in-out infinite; }
+
+@keyframes flux-highlight { 0% { background: var(--brand-primary-soft); } 100% { background: transparent; } }
+@keyframes flux-toast-in { from { opacity: 0; transform: translateY(-12px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes flux-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
