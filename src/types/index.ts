@@ -2,6 +2,7 @@
 export interface FraudEvent {
   flag_id: string;
   event_id: string;
+  correlation_id: string;
   user_id: string;
   amount: number;
   currency: string;

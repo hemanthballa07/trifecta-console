@@ -21,10 +21,14 @@ function RuleBadge({ rule }: { rule: string }) {
 
 function FraudRow({ fe }: { fe: FraudEvent }) {
   const ts = new Date(fe.flagged_at);
+  const corrShort = fe.correlation_id ? fe.correlation_id.slice(0, 8) : "—";
   return (
     <tr className="border-t border-slate-700 hover:bg-slate-800/60 transition-colors">
       <td className="px-4 py-3 text-xs text-slate-400 font-mono whitespace-nowrap">
         {ts.toLocaleTimeString()}
+      </td>
+      <td className="px-4 py-3 text-xs text-slate-500 font-mono" title={fe.correlation_id}>
+        {corrShort}
       </td>
       <td className="px-4 py-3 text-sm text-slate-200 font-mono">{fe.user_id}</td>
       <td className="px-4 py-3 text-sm text-slate-100 font-semibold whitespace-nowrap">
@@ -69,6 +73,7 @@ export default function FraudFeedPage() {
           <thead>
             <tr className="bg-slate-900 text-xs text-slate-400 uppercase tracking-wider">
               <th className="px-4 py-3">Time</th>
+              <th className="px-4 py-3">Corr ID</th>
               <th className="px-4 py-3">User</th>
               <th className="px-4 py-3">Amount</th>
               <th className="px-4 py-3">Merchant</th>
