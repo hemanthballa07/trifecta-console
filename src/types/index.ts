@@ -7,8 +7,9 @@ export interface FraudEvent {
   amount: number;
   currency: string;
   merchant: string;
-  rule_name: "amount_threshold" | "velocity" | "blocked_merchant" | "high_risk_currency" | string;
+  rule_name: "amount_threshold" | "velocity" | "blocked_merchant" | "high_risk_currency" | "ml_risk" | string;
   rule_value: string;
+  ml_score: number; // blended ML fraud probability [0,1] (0 when scorer unavailable)
   flagged_at: string; // ISO-8601
 }
 

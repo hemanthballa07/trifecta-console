@@ -8,6 +8,7 @@ const ruleColors: Record<string, string> = {
   velocity: "bg-red-900/50 text-red-300 border-red-700",
   blocked_merchant: "bg-orange-900/50 text-orange-300 border-orange-700",
   high_risk_currency: "bg-purple-900/50 text-purple-300 border-purple-700",
+  ml_risk: "bg-indigo-900/50 text-indigo-300 border-indigo-700",
 };
 
 function RuleBadge({ rule }: { rule: string }) {
@@ -36,6 +37,22 @@ function FraudRow({ fe }: { fe: FraudEvent }) {
       </td>
       <td className="px-4 py-3 text-sm text-slate-300">{fe.merchant}</td>
       <td className="px-4 py-3"><RuleBadge rule={fe.rule_name} /></td>
+      <td className="px-4 py-3 whitespace-nowrap">
+        {fe.ml_score > 0 ? (
+          <span
+            title={`ML risk score ${fe.ml_score.toFixed(4)}`}
+            className={`inline-flex px-2 py-0.5 rounded border text-xs font-mono ${
+              fe.ml_score >= 0.87
+                ? "bg-rose-900/50 text-rose-300 border-rose-700"
+                : "bg-slate-800 text-slate-400 border-slate-700"
+            }`}
+          >
+            {(fe.ml_score * 100).toFixed(0)}%
+          </span>
+        ) : (
+          <span className="text-slate-600" title="scorer unavailable / rules-only">—</span>
+        )}
+      </td>
       <td className="px-4 py-3 text-xs text-slate-500 max-w-xs truncate" title={fe.rule_value}>
         {fe.rule_value}
       </td>
@@ -78,13 +95,14 @@ export default function FraudFeedPage() {
               <th className="px-4 py-3">Amount</th>
               <th className="px-4 py-3">Merchant</th>
               <th className="px-4 py-3">Rule</th>
+              <th className="px-4 py-3">ML</th>
               <th className="px-4 py-3">Detail</th>
             </tr>
           </thead>
           <tbody>
             {events.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-slate-500">
+                <td colSpan={8} className="px-4 py-12 text-center text-slate-500">
                   {status === "connecting" ? "Connecting to Fluxa…" : "No fraud events yet"}
                 </td>
               </tr>
