@@ -78,7 +78,7 @@ export default async function RateLimitsPage() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
         <Kpi label="Allowed (total)" value={fmtInt(view.kpis.allowed)} />
         <Kpi label="Denied · 429 (total)" value={fmtInt(view.kpis.denied)} color="var(--txn-rejected)" />
-        <Kpi label="Deny rate (5m)" value={fmtPct(view.kpis.denyRatePct)} color="var(--brand-primary)" />
+        <Kpi label="Deny rate" value={fmtPct(view.kpis.denyRatePct)} color="var(--brand-primary)" />
         <Kpi
           label="Fail-open events"
           value={fmtInt(view.kpis.failOpen)}

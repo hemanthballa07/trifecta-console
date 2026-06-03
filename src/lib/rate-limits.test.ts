@@ -12,9 +12,7 @@ const scalar = (value: number) => ({ metric: {}, value: [0, String(value)] as [n
 const okRaw = (): RawResults => ({
   allowedTotal: [vec("policy:transaction", 21), vec("policy:ops_release", 5)],
   deniedTotal: [vec("policy:transaction", 9), vec("policy:ops_release", 0)],
-  allowedRate: [vec("policy:transaction", 7), vec("policy:ops_release", 1)],
-  deniedRate: [vec("policy:transaction", 3), vec("policy:ops_release", 0)],
-  p95: [vec("policy:transaction", 0.019)], // seconds
+  p95: [vec("policy:transaction", 0.019)], // seconds (cumulative-bucket p95)
   failOpen: [scalar(2)],
   overallP95: [scalar(0.021)],
   up: [scalar(1)],
@@ -26,12 +24,13 @@ describe("toRateLimitView", () => {
     expect(v.state).toBe("ok");
     expect(v.kpis.allowed).toBe(26);
     expect(v.kpis.denied).toBe(9);
-    // deny-rate over the 5m window: dR / (aR + dR) = 3 / (8 + 3) = 27.27%
-    expect(v.kpis.denyRatePct).toBeCloseTo(27.27, 1);
+    // lifetime deny-rate: denied / (allowed + denied) = 9 / (26 + 9) = 25.71%
+    expect(v.kpis.denyRatePct).toBeCloseTo(25.71, 1);
     expect(v.kpis.failOpen).toBe(2);
     const txn = v.policies.find((p) => p.endpoint === "policy:transaction")!;
     expect(txn.policy).toBe("TRANSACTION");
     expect(txn.denied).toBe(9);
+    expect(txn.denyRatePct).toBeCloseTo(30, 0); // lifetime: 9 / (21 + 9)
     expect(txn.p95Ms).toBeCloseTo(19, 0); // 0.019s -> 19ms
     // LOGIN is never a row
     expect(v.policies.find((p) => p.endpoint === "policy:login")).toBeUndefined();
