@@ -15,11 +15,9 @@ export const POLICY_LABELS: Record<string, string> = {
 export const QUERIES = {
   allowedTotal: `sum by (endpoint) (rate_limit_allowed_total{${SCOPE}})`,
   deniedTotal: `sum by (endpoint) (rate_limit_denied_total{${SCOPE}})`,
-  allowedRate: `sum by (endpoint) (rate(rate_limit_allowed_total{${SCOPE}}[5m]))`,
-  deniedRate: `sum by (endpoint) (rate(rate_limit_denied_total{${SCOPE}}[5m]))`,
-  p95: `histogram_quantile(0.95, sum by (le, endpoint) (rate(rate_limit_duration_seconds_bucket{${SCOPE}}[5m])))`,
+  p95: `histogram_quantile(0.95, sum by (le, endpoint) (rate_limit_duration_seconds_bucket{${SCOPE}}))`,
   failOpen: `sum(rate_limit_failopen_total{${SCOPE}})`,
-  overallP95: `histogram_quantile(0.95, sum by (le) (rate(rate_limit_duration_seconds_bucket{${SCOPE}}[5m])))`,
+  overallP95: `histogram_quantile(0.95, sum by (le) (rate_limit_duration_seconds_bucket{${SCOPE}}))`,
   up: `up{job="fluxguard"}`,
 } as const;
 
@@ -101,37 +99,35 @@ export function toRateLimitView(raw: RawResults): RateLimitView {
     };
   }
 
-  const allowedR = byEndpoint(raw.allowedRate);
-  const deniedR = byEndpoint(raw.deniedRate);
   const p95 = byEndpoint(raw.p95);
 
   const policies: PolicyRow[] = Object.keys(POLICY_LABELS).map((ep) => {
-    const aR = allowedR.get(ep) ?? 0;
-    const dR = deniedR.get(ep) ?? 0;
-    const denom = aR + dR;
+    const aT = allowedT.get(ep) ?? 0;
+    const dT = deniedT.get(ep) ?? 0;
+    const denom = aT + dT;
     const p95s = p95.get(ep);
     return {
       endpoint: ep,
       policy: POLICY_LABELS[ep],
-      allowed: allowedT.get(ep) ?? 0,
-      denied: deniedT.get(ep) ?? 0,
-      denyRatePct: denom > 0 ? (dR / denom) * 100 : 0,
+      allowed: aT,
+      denied: dT,
+      denyRatePct: denom > 0 ? (dT / denom) * 100 : 0,
       p95Ms: p95s != null ? p95s * 1000 : null,
     };
   });
 
-  const aRSum = sumValues(allowedR);
-  const dRSum = sumValues(deniedR);
-  const denom = aRSum + dRSum;
+  const allowedSum = sumValues(allowedT);
+  const deniedSum = sumValues(deniedT);
+  const denom = allowedSum + deniedSum;
   const overall = scalarFirst(raw.overallP95);
   const failOpen = scalarFirst(raw.failOpen) ?? 0;
 
   return {
     state: "ok",
     kpis: {
-      allowed: sumValues(allowedT),
-      denied: sumValues(deniedT),
-      denyRatePct: denom > 0 ? (dRSum / denom) * 100 : 0,
+      allowed: allowedSum,
+      denied: deniedSum,
+      denyRatePct: denom > 0 ? (deniedSum / denom) * 100 : 0,
       failOpen,
     },
     policies,

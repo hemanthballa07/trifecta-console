@@ -8,16 +8,20 @@ async function apiFetch<T>(url: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+// bankops returns a bare JSON array for these; the console treats them as a
+// { content } page, so normalize both shapes (array or Spring Page) here.
 export async function fetchHeldTransactions() {
-  return apiFetch<{ content: import("@/types").Transaction[] }>(
-    `${BANKOPS_BASE}/transactions?status=HELD`
-  );
+  const d = await apiFetch<
+    import("@/types").Transaction[] | { content?: import("@/types").Transaction[] }
+  >(`${BANKOPS_BASE}/transactions?status=HELD`);
+  return { content: Array.isArray(d) ? d : d.content ?? [] };
 }
 
 export async function fetchOpenCases() {
-  return apiFetch<{ content: import("@/types").SupportCase[] }>(
-    `${BANKOPS_BASE}/cases?status=OPEN&size=100`
-  );
+  const d = await apiFetch<
+    import("@/types").SupportCase[] | { content?: import("@/types").SupportCase[] }
+  >(`${BANKOPS_BASE}/cases?status=OPEN&size=100`);
+  return { content: Array.isArray(d) ? d : d.content ?? [] };
 }
 
 export async function releaseTransaction(accountId: number, txnId: number) {

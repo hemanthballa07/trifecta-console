@@ -1,108 +1,162 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useFraudStream } from "@/hooks/useFraudStream";
 import type { FraudEvent } from "@/types";
 
-const ruleColors: Record<string, string> = {
-  amount_threshold: "bg-amber-900/50 text-amber-300 border-amber-700",
-  velocity: "bg-red-900/50 text-red-300 border-red-700",
-  blocked_merchant: "bg-orange-900/50 text-orange-300 border-orange-700",
-  high_risk_currency: "bg-purple-900/50 text-purple-300 border-purple-700",
-  ml_risk: "bg-indigo-900/50 text-indigo-300 border-indigo-700",
+const card: CSSProperties = {
+  background: "var(--bg-surface)",
+  border: "1px solid var(--border-default)",
+  borderRadius: "var(--radius-card)",
+  boxShadow: "var(--shadow-card)",
+};
+
+const ruleTones: Record<string, { color: string; soft: string }> = {
+  amount_threshold: { color: "#92400E", soft: "var(--soft-amber)" },
+  velocity: { color: "#B91C1C", soft: "var(--soft-critical)" },
+  blocked_merchant: { color: "#9A3412", soft: "var(--soft-high)" },
+  high_risk_currency: { color: "#6D28D9", soft: "#F5F3FF" },
+  ml_risk: { color: "#4338CA", soft: "var(--brand-primary-soft)" },
 };
 
 function RuleBadge({ rule }: { rule: string }) {
-  const cls = ruleColors[rule] ?? "bg-slate-700 text-slate-300 border-slate-600";
+  const tone = ruleTones[rule] ?? { color: "var(--text-secondary)", soft: "var(--soft-slate)" };
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded border text-xs font-mono ${cls}`}>
+    <span
+      className="mono"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "2px 9px",
+        borderRadius: "var(--radius-chip)",
+        background: tone.soft,
+        color: tone.color,
+        fontSize: 12,
+        fontWeight: 600,
+        whiteSpace: "nowrap",
+      }}
+    >
       {rule}
     </span>
   );
 }
 
+const th: CSSProperties = { padding: "11px 20px", textAlign: "left" };
+const td: CSSProperties = { padding: "12px 20px", borderTop: "1px solid var(--border-default)" };
+
 function FraudRow({ fe }: { fe: FraudEvent }) {
   const ts = new Date(fe.flagged_at);
   const corrShort = fe.correlation_id ? fe.correlation_id.slice(0, 8) : "—";
+  const mlHigh = fe.ml_score >= 0.87;
   return (
-    <tr className="border-t border-slate-700 hover:bg-slate-800/60 transition-colors">
-      <td className="px-4 py-3 text-xs text-slate-400 font-mono whitespace-nowrap">
+    <tr>
+      <td className="mono" style={{ ...td, fontSize: 12, color: "var(--text-tertiary)", whiteSpace: "nowrap" }}>
         {ts.toLocaleTimeString()}
       </td>
-      <td className="px-4 py-3 text-xs text-slate-500 font-mono" title={fe.correlation_id}>
+      <td className="mono" style={{ ...td, fontSize: 12, color: "var(--text-tertiary)" }} title={fe.correlation_id}>
         {corrShort}
       </td>
-      <td className="px-4 py-3 text-sm text-slate-200 font-mono">{fe.user_id}</td>
-      <td className="px-4 py-3 text-sm text-slate-100 font-semibold whitespace-nowrap">
+      <td className="mono" style={{ ...td, color: "var(--text-primary)" }}>{fe.user_id}</td>
+      <td className="mono" style={{ ...td, color: "var(--txn-rejected)", fontWeight: 600, whiteSpace: "nowrap" }}>
         {fe.currency} {fe.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
       </td>
-      <td className="px-4 py-3 text-sm text-slate-300">{fe.merchant}</td>
-      <td className="px-4 py-3"><RuleBadge rule={fe.rule_name} /></td>
-      <td className="px-4 py-3 whitespace-nowrap">
+      <td style={{ ...td, color: "var(--text-secondary)" }}>{fe.merchant}</td>
+      <td style={td}><RuleBadge rule={fe.rule_name} /></td>
+      <td style={{ ...td, whiteSpace: "nowrap" }}>
         {fe.ml_score > 0 ? (
           <span
             title={`ML risk score ${fe.ml_score.toFixed(4)}`}
-            className={`inline-flex px-2 py-0.5 rounded border text-xs font-mono ${
-              fe.ml_score >= 0.87
-                ? "bg-rose-900/50 text-rose-300 border-rose-700"
-                : "bg-slate-800 text-slate-400 border-slate-700"
-            }`}
+            className="mono"
+            style={{
+              display: "inline-flex",
+              padding: "2px 9px",
+              borderRadius: "var(--radius-chip)",
+              fontSize: 12,
+              fontWeight: 600,
+              background: mlHigh ? "var(--soft-critical)" : "var(--soft-slate)",
+              color: mlHigh ? "#B91C1C" : "var(--text-secondary)",
+            }}
           >
             {(fe.ml_score * 100).toFixed(0)}%
           </span>
         ) : (
-          <span className="text-slate-600" title="scorer unavailable / rules-only">—</span>
+          <span style={{ color: "var(--text-tertiary)" }} title="scorer unavailable / rules-only">—</span>
         )}
       </td>
-      <td className="px-4 py-3 text-xs text-slate-500 max-w-xs truncate" title={fe.rule_value}>
+      <td
+        className="mono"
+        style={{ ...td, fontSize: 12, color: "var(--text-tertiary)", maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+        title={fe.rule_value}
+      >
         {fe.rule_value}
       </td>
     </tr>
   );
 }
 
-const statusDot: Record<string, string> = {
-  connecting: "bg-yellow-400 animate-pulse",
-  live: "bg-emerald-400 animate-pulse",
-  error: "bg-red-500",
-  closed: "bg-slate-500",
+const statusTones: Record<string, { color: string; soft: string; label: string }> = {
+  connecting: { color: "#92400E", soft: "var(--soft-amber)", label: "Connecting" },
+  live: { color: "#047857", soft: "var(--soft-emerald)", label: "Live" },
+  error: { color: "#B91C1C", soft: "var(--soft-critical)", label: "Error" },
+  closed: { color: "var(--text-secondary)", soft: "var(--soft-slate)", label: "Closed" },
 };
 
 export default function FraudFeedPage() {
   const { events, status } = useFraudStream(50);
+  const st = statusTones[status] ?? statusTones.closed;
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
+    <div style={{ padding: 32, display: "flex", flexDirection: "column", gap: 20, maxWidth: 1120 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
         <div>
-          <h1 className="text-xl font-semibold text-slate-100">Fraud Feed</h1>
-          <p className="text-slate-400 text-sm mt-0.5">Live stream from Fluxa query service — SSE on :8083/fraud-events</p>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: "var(--text-primary)" }}>Fraud Feed</h1>
+          <p style={{ margin: "3px 0 0", fontSize: 13, color: "var(--text-secondary)" }}>
+            Live stream from Fluxa query service — SSE on :8083/fraud-events
+          </p>
         </div>
-        <div className="flex items-center gap-2 text-sm text-slate-400">
-          <span className={`w-2 h-2 rounded-full ${statusDot[status]}`} />
-          <span className="capitalize">{status}</span>
-          <span className="text-slate-600">·</span>
-          <span>{events.length} events</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "var(--text-secondary)" }}>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "2px 9px",
+              borderRadius: "var(--radius-chip)",
+              background: st.soft,
+              color: st.color,
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+          >
+            {status === "live" ? (
+              <span className="live-dot" />
+            ) : (
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: st.color }} />
+            )}
+            {st.label}
+          </span>
+          <span className="mono" style={{ color: "var(--text-tertiary)" }}>{events.length} events</span>
         </div>
       </div>
 
-      <div className="bg-slate-800 rounded-lg overflow-hidden">
-        <table className="w-full text-left">
+      <div style={{ ...card, overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
-            <tr className="bg-slate-900 text-xs text-slate-400 uppercase tracking-wider">
-              <th className="px-4 py-3">Time</th>
-              <th className="px-4 py-3">Corr ID</th>
-              <th className="px-4 py-3">User</th>
-              <th className="px-4 py-3">Amount</th>
-              <th className="px-4 py-3">Merchant</th>
-              <th className="px-4 py-3">Rule</th>
-              <th className="px-4 py-3">ML</th>
-              <th className="px-4 py-3">Detail</th>
+            <tr>
+              <th className="t-caption" style={th}>Time</th>
+              <th className="t-caption" style={th}>Corr ID</th>
+              <th className="t-caption" style={th}>User</th>
+              <th className="t-caption" style={th}>Amount</th>
+              <th className="t-caption" style={th}>Merchant</th>
+              <th className="t-caption" style={th}>Rule</th>
+              <th className="t-caption" style={th}>ML</th>
+              <th className="t-caption" style={th}>Detail</th>
             </tr>
           </thead>
           <tbody>
             {events.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-12 text-center text-slate-500">
+                <td colSpan={8} style={{ ...td, padding: "48px 20px", textAlign: "center", color: "var(--text-tertiary)" }}>
                   {status === "connecting" ? "Connecting to Fluxa…" : "No fraud events yet"}
                 </td>
               </tr>

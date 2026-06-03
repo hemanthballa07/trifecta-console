@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { loadRateLimitView, type RateLimitView } from "@/lib/rate-limits";
 import { PROMETHEUS_BASE } from "@/lib/api";
 
@@ -11,92 +12,126 @@ function fmtMs(n: number | null) {
   return n == null ? "—" : `${n.toFixed(0)} ms`;
 }
 
-function Kpi({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+const card: CSSProperties = {
+  background: "var(--bg-surface)",
+  border: "1px solid var(--border-default)",
+  borderRadius: "var(--radius-card)",
+  boxShadow: "var(--shadow-card)",
+};
+
+function Kpi({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <div className={`bg-slate-800 rounded-lg p-5 border-l-4 ${accent ? "border-rose-500" : "border-blue-500"}`}>
-      <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">{label}</p>
-      <p className={`text-3xl font-bold ${accent ? "text-rose-400" : "text-blue-400"}`}>{value}</p>
+    <div style={{ ...card, padding: "18px 20px" }}>
+      <p className="t-caption" style={{ margin: 0, marginBottom: 8 }}>{label}</p>
+      <p className="mono" style={{ margin: 0, fontSize: 28, fontWeight: 700, color: color ?? "var(--text-primary)" }}>
+        {value}
+      </p>
     </div>
   );
 }
+
+function Pill({ tone, children }: { tone: "ok" | "warn" | "neutral"; children: React.ReactNode }) {
+  const tones = {
+    ok: { background: "var(--soft-emerald)", color: "#047857" },
+    warn: { background: "var(--soft-amber)", color: "#92400E" },
+    neutral: { background: "var(--soft-slate)", color: "var(--text-secondary)" },
+  } as const;
+  return (
+    <div style={{ ...tones[tone], padding: "9px 14px", borderRadius: "var(--radius-default)", fontWeight: 600 }}>
+      {children}
+    </div>
+  );
+}
+
+const th: CSSProperties = { padding: "11px 20px" };
+const td: CSSProperties = { padding: "12px 20px", borderTop: "1px solid var(--border-default)" };
 
 export default async function RateLimitsPage() {
   const view: RateLimitView = await loadRateLimitView();
 
   return (
-    <div className="p-8 space-y-6">
+    <div style={{ padding: 32, display: "flex", flexDirection: "column", gap: 20, maxWidth: 1120 }}>
       <div>
-        <h1 className="text-xl font-semibold text-slate-100">Rate Limits</h1>
-        <p className="text-slate-400 text-sm mt-0.5">
+        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: "var(--text-primary)" }}>Rate Limits</h1>
+        <p style={{ margin: "3px 0 0", fontSize: 13, color: "var(--text-secondary)" }}>
           Fluxguard gRPC RateLimit · :9099 · via Prometheus — {PROMETHEUS_BASE}
         </p>
       </div>
 
-      {view.state === "prometheus-down" && (
-        <div className="bg-amber-900/40 border border-amber-700 rounded-lg px-4 py-3 text-amber-300 text-sm">
-          Prometheus unreachable on :9090 — start the Fluxa stack to see metrics.
-        </div>
-      )}
-      {view.state === "not-scraped" && (
-        <div className="bg-amber-900/40 border border-amber-700 rounded-lg px-4 py-3 text-amber-300 text-sm">
-          fluxguard not running or not scraped — start it on :8091 (its metrics port) and confirm the
-          <span className="font-mono"> fluxguard </span> target is up at {PROMETHEUS_BASE}/targets.
+      {(view.state === "prometheus-down" || view.state === "not-scraped") && (
+        <div
+          style={{
+            background: "var(--soft-amber)",
+            border: "1px solid var(--sev-medium)",
+            borderRadius: "var(--radius-default)",
+            color: "#92400E",
+            padding: "11px 16px",
+            fontSize: 13,
+          }}
+        >
+          {view.state === "prometheus-down"
+            ? "Prometheus unreachable on :9090 — start the Fluxa stack to see metrics."
+            : <>fluxguard not running or not scraped — start it on :8091 (its metrics port) and confirm the <span className="mono">fluxguard</span> target is up at {PROMETHEUS_BASE}/targets.</>}
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
         <Kpi label="Allowed (total)" value={fmtInt(view.kpis.allowed)} />
-        <Kpi label="Denied · 429 (total)" value={fmtInt(view.kpis.denied)} accent />
-        <Kpi label="Deny rate (5m)" value={fmtPct(view.kpis.denyRatePct)} />
-        <Kpi label="Fail-open events" value={fmtInt(view.kpis.failOpen)} />
+        <Kpi label="Denied · 429 (total)" value={fmtInt(view.kpis.denied)} color="var(--txn-rejected)" />
+        <Kpi label="Deny rate" value={fmtPct(view.kpis.denyRatePct)} color="var(--brand-primary)" />
+        <Kpi
+          label="Fail-open events"
+          value={fmtInt(view.kpis.failOpen)}
+          color={view.kpis.failOpen > 0 ? "var(--sev-medium)" : "var(--text-primary)"}
+        />
       </div>
 
-      <div className="bg-slate-800 rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
+      <div style={{ ...card, overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
-            <tr className="text-left text-slate-400 text-xs uppercase tracking-wider border-b border-slate-700">
-              <th className="px-5 py-3 font-medium">Policy</th>
-              <th className="px-5 py-3 font-medium text-right">Allowed</th>
-              <th className="px-5 py-3 font-medium text-right">Denied (429)</th>
-              <th className="px-5 py-3 font-medium text-right">Deny %</th>
-              <th className="px-5 py-3 font-medium text-right">p95 latency</th>
+            <tr>
+              <th className="t-caption" style={{ ...th, textAlign: "left" }}>Policy</th>
+              <th className="t-caption" style={{ ...th, textAlign: "right" }}>Allowed</th>
+              <th className="t-caption" style={{ ...th, textAlign: "right" }}>Denied (429)</th>
+              <th className="t-caption" style={{ ...th, textAlign: "right" }}>Deny %</th>
+              <th className="t-caption" style={{ ...th, textAlign: "right" }}>p95 latency</th>
             </tr>
           </thead>
           <tbody>
             {view.policies.map((p) => (
-              <tr key={p.endpoint} className="border-b border-slate-800/60 last:border-0">
-                <td className="px-5 py-3 font-mono text-slate-200">{p.policy}</td>
-                <td className="px-5 py-3 text-right text-slate-300">{fmtInt(p.allowed)}</td>
-                <td className="px-5 py-3 text-right text-rose-400">{fmtInt(p.denied)}</td>
-                <td className="px-5 py-3 text-right text-slate-300">{fmtPct(p.denyRatePct)}</td>
-                <td className="px-5 py-3 text-right text-slate-300">{fmtMs(p.p95Ms)}</td>
+              <tr key={p.endpoint}>
+                <td className="mono" style={{ ...td, color: "var(--text-primary)", fontWeight: 600 }}>{p.policy}</td>
+                <td className="mono" style={{ ...td, textAlign: "right", color: "var(--text-secondary)" }}>{fmtInt(p.allowed)}</td>
+                <td className="mono" style={{ ...td, textAlign: "right", color: "var(--txn-rejected)", fontWeight: 600 }}>{fmtInt(p.denied)}</td>
+                <td className="mono" style={{ ...td, textAlign: "right", color: "var(--text-secondary)" }}>{fmtPct(p.denyRatePct)}</td>
+                <td className="mono" style={{ ...td, textAlign: "right", color: "var(--text-secondary)" }}>{fmtMs(p.p95Ms)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      <div className="flex flex-wrap gap-4 text-sm">
-        <div className="bg-slate-800 rounded-lg px-4 py-3">
-          <span className="text-slate-400">Decision p95 (all): </span>
-          <span className="text-slate-200 font-medium">{fmtMs(view.health.overallP95Ms)}</span>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, fontSize: 13 }}>
+        <div style={{ ...card, padding: "9px 14px" }}>
+          <span style={{ color: "var(--text-tertiary)" }}>Decision p95 (all): </span>
+          <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 600 }}>{fmtMs(view.health.overallP95Ms)}</span>
         </div>
-        <div className={`rounded-lg px-4 py-3 ${view.health.failOpen > 0 ? "bg-amber-900/40 text-amber-300" : "bg-slate-800 text-slate-200"}`}>
+        <Pill tone={view.health.failOpen > 0 ? "warn" : "ok"}>
           {view.health.failOpen > 0
             ? `Redis degraded — failing open (${fmtInt(view.health.failOpen)})`
             : "Redis healthy — no fail-open"}
-        </div>
-        <div className={`rounded-lg px-4 py-3 ${view.health.fluxguardUp ? "bg-slate-800 text-emerald-400" : "bg-slate-800 text-slate-500"}`}>
+        </Pill>
+        <Pill tone={view.health.fluxguardUp ? "ok" : "neutral"}>
           fluxguard scrape: {view.health.fluxguardUp ? "up" : "down"}
-        </div>
+        </Pill>
       </div>
 
-      <div className="bg-slate-800 rounded-lg p-5 space-y-2">
-        <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">About</h2>
-        <p className="text-slate-400 text-sm leading-relaxed">
-          Decisions made by fluxguard&apos;s gRPC <span className="font-mono">RateLimit</span> service for
-          bankops (TRANSACTION and OPS release/reject). LOGIN brute-force throttling is enforced but not
-          metered here. Metrics are scoped to <span className="font-mono">endpoint=~&quot;policy:.*&quot;</span>.
+      <div style={{ ...card, padding: "18px 20px" }}>
+        <p className="t-caption" style={{ margin: 0, marginBottom: 8 }}>About</p>
+        <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+          Decisions made by fluxguard&apos;s gRPC <span className="mono">RateLimit</span> service for bankops
+          (TRANSACTION and OPS release/reject). LOGIN brute-force throttling is enforced but not metered here.
+          Metrics are scoped to <span className="mono">endpoint=~&quot;policy:.*&quot;</span>.
         </p>
       </div>
     </div>
