@@ -17,6 +17,7 @@ export const QUERIES = {
   deniedTotal: `sum by (endpoint) (rate_limit_denied_total{${SCOPE}})`,
   p95: `histogram_quantile(0.95, sum by (le, endpoint) (rate_limit_duration_seconds_bucket{${SCOPE}}))`,
   failOpen: `sum(rate_limit_failopen_total{${SCOPE}})`,
+  failOpenByReason: `sum by (reason) (rate_limit_failopen_total{${SCOPE}})`,
   overallP95: `histogram_quantile(0.95, sum by (le) (rate_limit_duration_seconds_bucket{${SCOPE}}))`,
   up: `up{job="fluxguard"}`,
 } as const;
@@ -39,16 +40,25 @@ export interface RateLimitView {
   state: "ok" | "prometheus-down" | "not-scraped";
   kpis: { allowed: number; denied: number; denyRatePct: number; failOpen: number };
   policies: PolicyRow[];
-  health: { overallP95Ms: number | null; failOpen: number; fluxguardUp: boolean };
+  health: {
+    overallP95Ms: number | null;
+    failOpen: number;
+    failOpenByReason: { reason: string; count: number }[];
+    fluxguardUp: boolean;
+  };
 }
 
-function byEndpoint(r: PromVec | null): Map<string, number> {
+function byLabel(r: PromVec | null, label: string): Map<string, number> {
   const m = new Map<string, number>();
   for (const s of r ?? []) {
     const v = parseFloat(s.value[1]);
-    if (!Number.isNaN(v)) m.set(s.metric.endpoint ?? "", v);
+    if (!Number.isNaN(v)) m.set(s.metric[label] ?? "", v);
   }
   return m;
+}
+
+function byEndpoint(r: PromVec | null): Map<string, number> {
+  return byLabel(r, "endpoint");
 }
 
 function scalarFirst(r: PromVec | null): number | null {
@@ -82,7 +92,7 @@ export function toRateLimitView(raw: RawResults): RateLimitView {
       state: "prometheus-down",
       kpis: { allowed: 0, denied: 0, denyRatePct: 0, failOpen: 0 },
       policies: emptyPolicies(),
-      health: { overallP95Ms: null, failOpen: 0, fluxguardUp: false },
+      health: { overallP95Ms: null, failOpen: 0, failOpenByReason: [], fluxguardUp: false },
     };
   }
 
@@ -95,7 +105,7 @@ export function toRateLimitView(raw: RawResults): RateLimitView {
       state: "not-scraped",
       kpis: { allowed: 0, denied: 0, denyRatePct: 0, failOpen: 0 },
       policies: emptyPolicies(),
-      health: { overallP95Ms: null, failOpen: 0, fluxguardUp: false },
+      health: { overallP95Ms: null, failOpen: 0, failOpenByReason: [], fluxguardUp: false },
     };
   }
 
@@ -121,6 +131,10 @@ export function toRateLimitView(raw: RawResults): RateLimitView {
   const denom = allowedSum + deniedSum;
   const overall = scalarFirst(raw.overallP95);
   const failOpen = scalarFirst(raw.failOpen) ?? 0;
+  const failOpenByReason = [...byLabel(raw.failOpenByReason, "reason").entries()]
+    .filter(([reason, count]) => reason !== "" && count > 0)
+    .map(([reason, count]) => ({ reason, count }))
+    .sort((a, b) => b.count - a.count);
 
   return {
     state: "ok",
@@ -134,6 +148,7 @@ export function toRateLimitView(raw: RawResults): RateLimitView {
     health: {
       overallP95Ms: overall != null ? overall * 1000 : null,
       failOpen,
+      failOpenByReason,
       fluxguardUp,
     },
   };

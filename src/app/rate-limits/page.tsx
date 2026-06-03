@@ -121,6 +121,14 @@ export default async function RateLimitsPage() {
             ? `Redis degraded — failing open (${fmtInt(view.health.failOpen)})`
             : "Redis healthy — no fail-open"}
         </Pill>
+        {view.health.failOpen > 0 &&
+          view.health.failOpenByReason.map((r) => (
+            <div key={r.reason} style={{ ...card, padding: "9px 14px" }}>
+              <span style={{ color: "var(--text-tertiary)" }}>reason: </span>
+              <span className="mono" style={{ color: "#92400E", fontWeight: 600 }}>{r.reason}</span>
+              <span className="mono" style={{ color: "var(--text-secondary)" }}> · {fmtInt(r.count)}</span>
+            </div>
+          ))}
         <Pill tone={view.health.fluxguardUp ? "ok" : "neutral"}>
           fluxguard scrape: {view.health.fluxguardUp ? "up" : "down"}
         </Pill>

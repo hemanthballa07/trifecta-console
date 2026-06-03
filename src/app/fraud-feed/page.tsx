@@ -1,8 +1,13 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { useFraudStream } from "@/hooks/useFraudStream";
 import type { FraudEvent } from "@/types";
+
+// Stable rule universe (the known FraudEvent.rule_name union). Any novel rule
+// arriving on the stream is unioned in at render; a selected rule is kept visible
+// even if it ages out of the buffer.
+const KNOWN_RULES = ["amount_threshold", "velocity", "blocked_merchant", "high_risk_currency", "ml_risk"];
 
 const card: CSSProperties = {
   background: "var(--bg-surface)",
@@ -101,9 +106,45 @@ const statusTones: Record<string, { color: string; soft: string; label: string }
   closed: { color: "var(--text-secondary)", soft: "var(--soft-slate)", label: "Closed" },
 };
 
+function RuleFilterChip({ rule, active, onClick }: { rule: string; active: boolean; onClick: () => void }) {
+  const tone = rule === "all" ? null : ruleTones[rule] ?? { color: "var(--text-secondary)", soft: "var(--soft-slate)" };
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={rule === "all" ? undefined : "mono"}
+      style={{
+        cursor: "pointer",
+        padding: "2px 9px",
+        borderRadius: "var(--radius-chip)",
+        fontSize: 12,
+        fontWeight: 600,
+        border: "1px solid var(--border-default)",
+        background: active ? tone?.soft ?? "var(--brand-primary)" : "var(--bg-surface)",
+        color: active ? tone?.color ?? "#FFFFFF" : "var(--text-secondary)",
+      }}
+    >
+      {rule === "all" ? "All" : rule}
+    </button>
+  );
+}
+
 export default function FraudFeedPage() {
   const { events, status } = useFraudStream(50);
   const st = statusTones[status] ?? statusTones.closed;
+  const [rule, setRule] = useState("all");
+
+  const rules = useMemo(() => {
+    const set = new Set<string>(KNOWN_RULES);
+    for (const e of events) set.add(e.rule_name);
+    if (rule !== "all") set.add(rule);
+    return [...set];
+  }, [events, rule]);
+
+  const visible = useMemo(
+    () => events.filter((e) => rule === "all" || e.rule_name === rule),
+    [events, rule]
+  );
 
   return (
     <div style={{ padding: 32, display: "flex", flexDirection: "column", gap: 20, maxWidth: 1120 }}>
@@ -135,8 +176,16 @@ export default function FraudFeedPage() {
             )}
             {st.label}
           </span>
-          <span className="mono" style={{ color: "var(--text-tertiary)" }}>{events.length} events</span>
+          <span className="mono" style={{ color: "var(--text-tertiary)" }}>{visible.length} of {events.length} events</span>
         </div>
+      </div>
+
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+        <span className="t-caption" style={{ color: "var(--text-tertiary)" }}>Rule</span>
+        <RuleFilterChip rule="all" active={rule === "all"} onClick={() => setRule("all")} />
+        {rules.map((r) => (
+          <RuleFilterChip key={r} rule={r} active={rule === r} onClick={() => setRule(r)} />
+        ))}
       </div>
 
       <div style={{ ...card, overflow: "hidden" }}>
@@ -160,8 +209,14 @@ export default function FraudFeedPage() {
                   {status === "connecting" ? "Connecting to Fluxa…" : "No fraud events yet"}
                 </td>
               </tr>
+            ) : visible.length === 0 ? (
+              <tr>
+                <td colSpan={8} style={{ ...td, padding: "48px 20px", textAlign: "center", color: "var(--text-tertiary)" }}>
+                  No events match the <span className="mono">{rule}</span> rule.
+                </td>
+              </tr>
             ) : (
-              events.map((fe) => <FraudRow key={fe.flag_id} fe={fe} />)
+              visible.map((fe) => <FraudRow key={fe.flag_id} fe={fe} />)
             )}
           </tbody>
         </table>

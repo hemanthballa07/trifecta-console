@@ -7,6 +7,11 @@ const vec = (endpoint: string, value: number) => ({
   value: [0, String(value)] as [number, string],
 });
 const scalar = (value: number) => ({ metric: {}, value: [0, String(value)] as [number, string] });
+// Helper: a fail-open series carries a `reason` label, not an `endpoint`.
+const reasonVec = (reason: string, value: number) => ({
+  metric: { reason },
+  value: [0, String(value)] as [number, string],
+});
 
 // All keys present, with realistic post-burst numbers.
 const okRaw = (): RawResults => ({
@@ -14,6 +19,7 @@ const okRaw = (): RawResults => ({
   deniedTotal: [vec("policy:transaction", 9), vec("policy:ops_release", 0)],
   p95: [vec("policy:transaction", 0.019)], // seconds (cumulative-bucket p95)
   failOpen: [scalar(2)],
+  failOpenByReason: [reasonVec("redis_error", 2)],
   overallP95: [scalar(0.021)],
   up: [scalar(1)],
 });
@@ -36,6 +42,15 @@ describe("toRateLimitView", () => {
     expect(v.policies.find((p) => p.endpoint === "policy:login")).toBeUndefined();
     expect(v.health.fluxguardUp).toBe(true);
     expect(v.health.overallP95Ms).toBeCloseTo(21, 0);
+    // fail-open breakdown keyed on the `reason` label (not `endpoint`)
+    expect(v.health.failOpenByReason).toEqual([{ reason: "redis_error", count: 2 }]);
+  });
+
+  it("returns an empty fail-open breakdown under zero traffic", () => {
+    const raw = Object.fromEntries(
+      Object.keys(okRaw()).map((k) => [k, k === "up" ? [scalar(1)] : []])
+    ) as unknown as RawResults;
+    expect(toRateLimitView(raw).health.failOpenByReason).toEqual([]);
   });
 
   it("reports prometheus-down when every query rejected (null)", () => {

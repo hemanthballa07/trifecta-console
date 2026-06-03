@@ -29,8 +29,10 @@ export interface Transaction {
 export interface SupportCase {
   id: number;
   accountId: number;
-  title: string;
-  status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+  // BankOps sends `summary`; `title` is reserved for any future titled cases.
+  title?: string | null;
+  summary?: string | null;
+  status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED" | "NEW";
   priority: "P1" | "P2" | "P3";
   severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
   slaDueAt: string | null;
