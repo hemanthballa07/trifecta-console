@@ -42,21 +42,21 @@ describe("toRateLimitView", () => {
   it("reports prometheus-down when every query rejected (null)", () => {
     const raw = Object.fromEntries(
       Object.keys(okRaw()).map((k) => [k, null])
-    ) as RawResults;
+    ) as unknown as RawResults;
     expect(toRateLimitView(raw).state).toBe("prometheus-down");
   });
 
   it("reports not-scraped when prometheus is up but fluxguard has no series and target is down", () => {
     const raw = Object.fromEntries(
       Object.keys(okRaw()).map((k) => [k, []])
-    ) as RawResults;
+    ) as unknown as RawResults;
     expect(toRateLimitView(raw).state).toBe("not-scraped");
   });
 
   it("renders 0% deny-rate and null p95 under zero traffic (up=1, empty counters)", () => {
     const raw = Object.fromEntries(
       Object.keys(okRaw()).map((k) => [k, k === "up" ? [scalar(1)] : []])
-    ) as RawResults;
+    ) as unknown as RawResults;
     const v = toRateLimitView(raw);
     expect(v.state).toBe("ok");
     expect(v.kpis.denyRatePct).toBe(0);
