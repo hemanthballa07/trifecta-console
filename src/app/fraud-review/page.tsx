@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useFraudStream } from "@/hooks/useFraudStream";
 import { releaseTransaction, rejectTransaction, BANKOPS_BASE } from "@/lib/api";
 import type { FraudEvent } from "@/types";
@@ -732,17 +732,11 @@ export default function FraudReviewPage() {
         if (!data) return;
         const txns: { id: number; amount: number; currency: string; merchant: string; createdAt: string; correlationId?: string }[] = data.content ?? data;
         if (!txns || txns.length === 0) return;
-        // Merge live signals from Fluxa SSE by correlation_id
-        const sigsByCorr = new Map<string, FraudEvent[]>();
-        events.forEach((fe) => {
-          const key = fe.correlation_id;
-          if (!sigsByCorr.has(key)) sigsByCorr.set(key, []);
-          sigsByCorr.get(key)!.push(fe);
-        });
         const mapped: HeldItem[] = txns.map((txn) => {
           const corrId = txn.correlationId ?? String(txn.id);
           const ageMins = Math.floor((Date.now() - new Date(txn.createdAt).getTime()) / 60000);
-          const signals = mapFraudEventsToSignals(sigsByCorr.get(corrId) ?? []);
+          // signals are enriched from live SSE events at render time (see enrichedHelds)
+          const signals: Signal[] = [];
           const name = `Account ${txn.id}`;
           return {
             id: String(txn.id), txnId: `TXN-${txn.id}`, correlationId: corrId,
@@ -761,23 +755,6 @@ export default function FraudReviewPage() {
       .catch(() => {}) // Keep mock data on error
       .finally(() => setLoading(false));
   }, []);
-
-  // Re-enrich signals when SSE events arrive
-  useEffect(() => {
-    if (events.length === 0) return;
-    const sigsByCorr = new Map<string, FraudEvent[]>();
-    events.forEach((fe) => {
-      if (!sigsByCorr.has(fe.correlation_id)) sigsByCorr.set(fe.correlation_id, []);
-      sigsByCorr.get(fe.correlation_id)!.push(fe);
-    });
-    setHelds((prev) =>
-      prev.map((h) => {
-        const fresh = sigsByCorr.get(h.correlationId);
-        if (!fresh || fresh.length === 0) return h;
-        return { ...h, signals: mapFraudEventsToSignals(fresh) };
-      })
-    );
-  }, [events]);
 
   // Toast auto-dismiss
   useEffect(() => {
@@ -802,13 +779,29 @@ export default function FraudReviewPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [modal]);
 
+  // Enrich each hold's signals from live SSE events (by correlation_id) — derived, not stateful.
+  const enrichedHelds = useMemo(() => {
+    if (events.length === 0) return helds;
+    const sigsByCorr = new Map<string, FraudEvent[]>();
+    events.forEach((fe) => {
+      if (!sigsByCorr.has(fe.correlation_id)) sigsByCorr.set(fe.correlation_id, []);
+      sigsByCorr.get(fe.correlation_id)!.push(fe);
+    });
+    return helds.map((h) => {
+      const fresh = sigsByCorr.get(h.correlationId);
+      if (!fresh || fresh.length === 0) return h;
+      const signals = mapFraudEventsToSignals(fresh);
+      return { ...h, signals, priorityScore: signals.length * 20 + Math.min(h.ageMins, 60) };
+    });
+  }, [helds, events]);
+
   const visible = useMemo(() => {
-    let list = helds.slice();
+    let list = enrichedHelds.slice();
     const q = query.trim().toLowerCase();
     if (q) list = list.filter((h) => h.customer.name.toLowerCase().includes(q) || h.txnId.toLowerCase().includes(q) || h.customer.acctMask.includes(q));
     const cmp = { priority: (a: HeldItem, b: HeldItem) => b.priorityScore - a.priorityScore, age: (a: HeldItem, b: HeldItem) => b.ageMins - a.ageMins, amount: (a: HeldItem, b: HeldItem) => b.amount - a.amount }[sort];
     return cmp ? list.sort(cmp) : list;
-  }, [helds, query, sort]);
+  }, [enrichedHelds, query, sort]);
 
   const selected = visible.find((h) => h.id === selectedId) ?? visible[0] ?? null;
 
