@@ -13,12 +13,17 @@ export interface FraudEvent {
   flagged_at: string; // ISO-8601
 }
 
-// BankOps transaction (subset of fields used in the console)
+// BankOps transaction (subset of fields used in the console).
+// BankOps omits currency/merchant on transactions; it sends description + category.
 export interface Transaction {
   id: number;
+  accountId?: number;
   amount: number;
-  currency: string;
-  merchant: string;
+  currency?: string;
+  merchant?: string;
+  description?: string;
+  category?: string;
+  mlScore?: number;
   status: "PENDING" | "COMPLETED" | "HELD" | "RELEASED" | "REJECTED";
   type: "DEPOSIT" | "WITHDRAWAL";
   createdAt: string;

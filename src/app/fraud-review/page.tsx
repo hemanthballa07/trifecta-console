@@ -19,6 +19,7 @@ interface Signal {
 
 interface HeldItem {
   id: string;
+  accountId?: number;
   txnId: string;
   correlationId: string;
   amount: number;
@@ -730,7 +731,7 @@ export default function FraudReviewPage() {
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         if (!data) return;
-        const txns: { id: number; amount: number; currency: string; merchant: string; createdAt: string; correlationId?: string }[] = data.content ?? data;
+        const txns: { id: number; accountId?: number; amount: number; currency?: string; merchant?: string; createdAt: string; correlationId?: string }[] = data.content ?? data;
         if (!txns || txns.length === 0) return;
         const mapped: HeldItem[] = txns.map((txn) => {
           const corrId = txn.correlationId ?? String(txn.id);
@@ -739,7 +740,7 @@ export default function FraudReviewPage() {
           const signals: Signal[] = [];
           const name = `Account ${txn.id}`;
           return {
-            id: String(txn.id), txnId: `TXN-${txn.id}`, correlationId: corrId,
+            id: String(txn.id), accountId: txn.accountId ?? 1, txnId: `TXN-${txn.id}`, correlationId: corrId,
             amount: txn.amount, currency: txn.currency ?? "USD", merchant: txn.merchant ?? "—",
             ageMins, sla: slaFromAge(ageMins), signals, priorityScore: signals.length * 20 + Math.min(ageMins, 60),
             customer: { name, initials: initials(name), acctMask: `••••${String(txn.id % 10000).padStart(4, "0")}` },
@@ -814,11 +815,11 @@ export default function FraudReviewPage() {
     if (!selected) return;
     setModal(null);
     if (type === "release") {
-      releaseTransaction(1, parseInt(selected.id)).catch(() => {});
+      releaseTransaction(selected.accountId ?? 1, parseInt(selected.id)).catch(() => {});
       setHelds((prev) => prev.filter((h) => h.id !== selected.id));
       setToast({ kind: "done", title: "Transaction released", body: `${selected.txnId} · customer notified.` });
     } else if (type === "reject") {
-      rejectTransaction(1, parseInt(selected.id)).catch(() => {});
+      rejectTransaction(selected.accountId ?? 1, parseInt(selected.id)).catch(() => {});
       setHelds((prev) => prev.filter((h) => h.id !== selected.id));
       setToast({ kind: "done", title: "Transaction rejected", body: `${selected.txnId} · ${payload.reason || "reason logged"}.` });
     } else if (type === "escalate") {
