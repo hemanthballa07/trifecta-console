@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useFraudStream } from "@/hooks/useFraudStream";
 import { releaseTransaction, rejectTransaction, BANKOPS_BASE } from "@/lib/api";
+import { txnAccountId, txnCurrency, txnMerchant } from "@/lib/bankops";
 import type { FraudEvent } from "@/types";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -744,12 +745,12 @@ export default function FraudReviewPage() {
           const signals: Signal[] = [];
           const name = `Account ${txn.id}`;
           return {
-            id: String(txn.id), accountId: txn.accountId ?? 1, txnId: `TXN-${txn.id}`, correlationId: corrId,
-            amount: txn.amount, currency: txn.currency ?? "USD", merchant: txn.merchant ?? "—",
+            id: String(txn.id), accountId: txnAccountId(txn), txnId: `TXN-${txn.id}`, correlationId: corrId,
+            amount: txn.amount, currency: txnCurrency(txn), merchant: txnMerchant(txn),
             ageMins, sla: slaFromAge(ageMins), signals, priorityScore: signals.length * 20 + Math.min(ageMins, 60),
             customer: { name, initials: initials(name), acctMask: `••••${String(txn.id % 10000).padStart(4, "0")}` },
             from: { label: name, sub: `••••${String(txn.id % 10000).padStart(4, "0")}` },
-            to: { label: txn.merchant ?? "—", sub: "Merchant" },
+            to: { label: txnMerchant(txn), sub: "Merchant" },
             channel: "Card not present", device: "—", ip: "—", geo: { flag: "🇺🇸", city: "—" },
             related: { account: [], ip: [], merchant: [], history: [] },
           };
@@ -820,14 +821,14 @@ export default function FraudReviewPage() {
     setModal(null);
     if (type === "release") {
       const notes = typeof payload.note === "string" && payload.note.trim() ? payload.note.trim() : undefined;
-      releaseTransaction(selected.accountId ?? 1, parseInt(selected.id), { actorId: CONSOLE_ACTOR, notes }).catch(() => {});
+      releaseTransaction(txnAccountId(selected), parseInt(selected.id), { actorId: CONSOLE_ACTOR, notes }).catch(() => {});
       setHelds((prev) => prev.filter((h) => h.id !== selected.id));
       setToast({ kind: "done", title: "Transaction released", body: `${selected.txnId} · customer notified.` });
     } else if (type === "reject") {
       const notes = [payload.reason, payload.note]
         .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
         .join(" — ") || undefined;
-      rejectTransaction(selected.accountId ?? 1, parseInt(selected.id), { actorId: CONSOLE_ACTOR, notes }).catch(() => {});
+      rejectTransaction(txnAccountId(selected), parseInt(selected.id), { actorId: CONSOLE_ACTOR, notes }).catch(() => {});
       setHelds((prev) => prev.filter((h) => h.id !== selected.id));
       setToast({ kind: "done", title: "Transaction rejected", body: `${selected.txnId} · ${payload.reason || "reason logged"}.` });
     } else if (type === "escalate") {

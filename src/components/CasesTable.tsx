@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type CSSProperties } from "react";
 import type { SupportCase } from "@/types";
+import { caseTitle } from "@/lib/bankops";
 
 // Date.now() lives in a helper (not the render body) to satisfy react-hooks/purity.
 function isSlaAtRisk(slaDueAt: string | null): boolean {
@@ -138,7 +139,7 @@ export default function CasesTable({ cases }: { cases: SupportCase[] }) {
                   <tr key={c.id}>
                     <td className="mono" style={{ ...td, color: "var(--text-tertiary)" }}>{c.id}</td>
                     <td style={{ ...td, color: "var(--text-primary)", maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {c.title ?? c.summary ?? "—"}
+                      {caseTitle(c)}
                     </td>
                     <td style={td}>
                       <Chip tone={priorityChip[c.priority]}>{c.priority}</Chip>
