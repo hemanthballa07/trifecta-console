@@ -521,7 +521,7 @@ git commit -m "feat(prometheus): scrape fluxguard /actuator/prometheus for the c
 - [ ] **Step 1: Bring up the full stack**
 
 - Fluxa stack up (Prometheus on :9090, reloaded per Task 4).
-- fluxguard running on the host: `SERVER_PORT=8091 <fluxguard run command>` (see `fluxguard/CLAUDE.md`).
+- fluxguard running on the host: `SERVER_PORT=8091 <fluxguard run command>` (see the fluxguard repo's run instructions).
 - bankops running on :8080 (JDK 21).
 - trifecta-console: `npm run dev -- --port 3001`.
 
