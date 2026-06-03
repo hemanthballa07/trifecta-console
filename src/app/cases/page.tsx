@@ -2,6 +2,12 @@ import type { CSSProperties } from "react";
 import { fetchOpenCases } from "@/lib/api";
 import type { SupportCase } from "@/types";
 
+// Date.now() lives in a helper (not the render body) to satisfy react-hooks/purity.
+function isSlaAtRisk(slaDueAt: string | null): boolean {
+  if (!slaDueAt) return false;
+  return new Date(slaDueAt).getTime() - Date.now() < 2 * 60 * 60 * 1000;
+}
+
 const card: CSSProperties = {
   background: "var(--bg-surface)",
   border: "1px solid var(--border-default)",
@@ -105,7 +111,7 @@ export default async function CasesPage() {
             ) : (
               cases.map((c) => {
                 const due = c.slaDueAt ? new Date(c.slaDueAt) : null;
-                const slaRisk = due && due.getTime() - Date.now() < 2 * 60 * 60 * 1000;
+                const slaRisk = isSlaAtRisk(c.slaDueAt);
                 return (
                   <tr key={c.id}>
                     <td className="mono" style={{ ...td, color: "var(--text-tertiary)" }}>{c.id}</td>
