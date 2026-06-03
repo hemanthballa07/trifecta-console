@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} h-full`}>
-      <body className="flex h-full bg-slate-900 text-slate-100 antialiased">
+      <body className="flex h-full antialiased" style={{ background: "var(--bg-canvas)", color: "var(--text-primary)" }}>
         <Sidebar />
         <main className="flex-1 overflow-auto">{children}</main>
       </body>
