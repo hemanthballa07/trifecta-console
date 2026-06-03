@@ -39,7 +39,7 @@ export default async function RateLimitsPage() {
       )}
       {view.state === "not-scraped" && (
         <div className="bg-amber-900/40 border border-amber-700 rounded-lg px-4 py-3 text-amber-300 text-sm">
-          fluxguard not running or not scraped — start it on :8091 and confirm the
+          fluxguard not running or not scraped — start it on :8091 (its metrics port) and confirm the
           <span className="font-mono"> fluxguard </span> target is up at {PROMETHEUS_BASE}/targets.
         </div>
       )}

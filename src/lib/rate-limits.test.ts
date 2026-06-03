@@ -53,6 +53,13 @@ describe("toRateLimitView", () => {
     expect(toRateLimitView(raw).state).toBe("not-scraped");
   });
 
+  it("reports not-scraped when the fluxguard scrape target is configured but down (up=0)", () => {
+    const raw = Object.fromEntries(
+      Object.keys(okRaw()).map((k) => [k, k === "up" ? [scalar(0)] : []])
+    ) as unknown as RawResults;
+    expect(toRateLimitView(raw).state).toBe("not-scraped");
+  });
+
   it("renders 0% deny-rate and null p95 under zero traffic (up=1, empty counters)", () => {
     const raw = Object.fromEntries(
       Object.keys(okRaw()).map((k) => [k, k === "up" ? [scalar(1)] : []])
