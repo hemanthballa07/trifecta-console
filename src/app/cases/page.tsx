@@ -1,18 +1,52 @@
+import type { CSSProperties } from "react";
 import { fetchOpenCases } from "@/lib/api";
 import type { SupportCase } from "@/types";
 
-const priorityColor: Record<string, string> = {
-  P1: "text-red-400 bg-red-900/40 border-red-700",
-  P2: "text-amber-400 bg-amber-900/40 border-amber-700",
-  P3: "text-slate-400 bg-slate-700 border-slate-600",
+const card: CSSProperties = {
+  background: "var(--bg-surface)",
+  border: "1px solid var(--border-default)",
+  borderRadius: "var(--radius-card)",
+  boxShadow: "var(--shadow-card)",
 };
 
-const severityColor: Record<string, string> = {
-  CRITICAL: "text-red-300",
-  HIGH: "text-orange-300",
-  MEDIUM: "text-amber-300",
-  LOW: "text-slate-400",
+const chip: CSSProperties = {
+  display: "inline-flex",
+  padding: "2px 9px",
+  borderRadius: "var(--radius-chip)",
+  fontSize: 12,
+  fontWeight: 600,
 };
+
+const priorityChip: Record<string, { background: string; color: string }> = {
+  P1: { background: "var(--soft-critical)", color: "#B91C1C" },
+  P2: { background: "var(--soft-amber)", color: "#92400E" },
+  P3: { background: "var(--soft-slate)", color: "var(--text-secondary)" },
+};
+
+const severityChip: Record<string, { background: string; color: string }> = {
+  CRITICAL: { background: "var(--soft-critical)", color: "#B91C1C" },
+  HIGH: { background: "var(--soft-high)", color: "#C2410C" },
+  MEDIUM: { background: "var(--soft-amber)", color: "#92400E" },
+  LOW: { background: "var(--soft-slate)", color: "var(--text-secondary)" },
+};
+
+const statusChip: Record<string, { background: string; color: string }> = {
+  OPEN: { background: "var(--soft-amber)", color: "#92400E" },
+  IN_PROGRESS: { background: "var(--soft-blue)", color: "#1E40AF" },
+  RESOLVED: { background: "var(--soft-emerald)", color: "#047857" },
+  CLOSED: { background: "var(--soft-slate)", color: "var(--text-secondary)" },
+};
+
+const th: CSSProperties = { padding: "11px 20px", textAlign: "left" };
+const td: CSSProperties = { padding: "12px 20px", borderTop: "1px solid var(--border-default)" };
+
+function Chip({ tone, children }: { tone?: { background: string; color: string }; children: React.ReactNode }) {
+  return (
+    <span style={{ ...chip, background: tone?.background ?? "var(--soft-slate)", color: tone?.color ?? "var(--text-secondary)" }}>
+      {children}
+    </span>
+  );
+}
 
 export default async function CasesPage() {
   let cases: SupportCase[] = [];
@@ -26,55 +60,82 @@ export default async function CasesPage() {
   }
 
   return (
-    <div className="p-8 space-y-6">
+    <div style={{ padding: 32, display: "flex", flexDirection: "column", gap: 20, maxWidth: 1120 }}>
       <div>
-        <h1 className="text-xl font-semibold text-slate-100">Cases</h1>
-        <p className="text-slate-400 text-sm mt-0.5">Open support cases from BankOps — {cases.length} open</p>
+        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: "var(--text-primary)" }}>Cases</h1>
+        <p style={{ margin: "3px 0 0", fontSize: 13, color: "var(--text-secondary)" }}>
+          Open support cases from BankOps — {cases.length} open
+        </p>
       </div>
 
       {fetchError && (
-        <div className="bg-red-900/40 border border-red-700 rounded-lg px-4 py-3 text-red-300 text-sm">
+        <div
+          style={{
+            background: "var(--soft-critical)",
+            border: "1px solid var(--sev-critical)",
+            borderRadius: "var(--radius-default)",
+            color: "#B91C1C",
+            padding: "11px 16px",
+            fontSize: 13,
+          }}
+        >
           {fetchError} — is bankops running on :8080?
         </div>
       )}
 
-      <div className="bg-slate-800 rounded-lg overflow-hidden">
-        <table className="w-full text-left">
+      <div style={{ ...card, overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
-            <tr className="bg-slate-900 text-xs text-slate-400 uppercase tracking-wider">
-              <th className="px-4 py-3">ID</th>
-              <th className="px-4 py-3">Title</th>
-              <th className="px-4 py-3">Priority</th>
-              <th className="px-4 py-3">Severity</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">SLA Due</th>
+            <tr>
+              <th className="t-caption" style={th}>ID</th>
+              <th className="t-caption" style={th}>Title</th>
+              <th className="t-caption" style={th}>Priority</th>
+              <th className="t-caption" style={th}>Severity</th>
+              <th className="t-caption" style={th}>Status</th>
+              <th className="t-caption" style={th}>SLA Due</th>
             </tr>
           </thead>
           <tbody>
             {cases.length === 0 && !fetchError ? (
-              <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-500">No open cases</td></tr>
-            ) : cases.map((c) => {
-              const due = c.slaDueAt ? new Date(c.slaDueAt) : null;
-              const slaRisk = due && due.getTime() - Date.now() < 2 * 60 * 60 * 1000;
-              return (
-                <tr key={c.id} className="border-t border-slate-700 hover:bg-slate-800/60">
-                  <td className="px-4 py-3 text-sm font-mono text-slate-400">{c.id}</td>
-                  <td className="px-4 py-3 text-sm text-slate-200 max-w-xs truncate">{c.title}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-0.5 rounded border text-xs font-mono ${priorityColor[c.priority] ?? "text-slate-400"}`}>
-                      {c.priority}
-                    </span>
-                  </td>
-                  <td className={`px-4 py-3 text-sm font-medium ${severityColor[c.severity] ?? "text-slate-400"}`}>
-                    {c.severity}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-300">{c.status}</td>
-                  <td className={`px-4 py-3 text-xs ${slaRisk ? "text-red-400 font-semibold" : "text-slate-400"}`}>
-                    {due ? due.toLocaleString() : "—"}
-                  </td>
-                </tr>
-              );
-            })}
+              <tr>
+                <td colSpan={6} style={{ ...td, textAlign: "center", padding: "48px 20px", color: "var(--text-tertiary)" }}>
+                  No open cases
+                </td>
+              </tr>
+            ) : (
+              cases.map((c) => {
+                const due = c.slaDueAt ? new Date(c.slaDueAt) : null;
+                const slaRisk = due && due.getTime() - Date.now() < 2 * 60 * 60 * 1000;
+                return (
+                  <tr key={c.id}>
+                    <td className="mono" style={{ ...td, color: "var(--text-tertiary)" }}>{c.id}</td>
+                    <td style={{ ...td, color: "var(--text-primary)", maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {c.title}
+                    </td>
+                    <td style={td}>
+                      <Chip tone={priorityChip[c.priority]}>{c.priority}</Chip>
+                    </td>
+                    <td style={td}>
+                      <Chip tone={severityChip[c.severity]}>{c.severity}</Chip>
+                    </td>
+                    <td style={td}>
+                      <Chip tone={statusChip[c.status]}>{c.status}</Chip>
+                    </td>
+                    <td
+                      className="mono"
+                      style={{
+                        ...td,
+                        fontSize: 12,
+                        color: slaRisk ? "var(--sla-breached)" : "var(--text-secondary)",
+                        fontWeight: slaRisk ? 600 : 400,
+                      }}
+                    >
+                      {due ? due.toLocaleString() : "—"}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>

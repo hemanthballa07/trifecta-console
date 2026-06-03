@@ -1,4 +1,4 @@
-import { KpiCard } from "@/components/KpiCard";
+import type { CSSProperties } from "react";
 import { fetchHeldTransactions, fetchOpenCases } from "@/lib/api";
 import type { SupportCase } from "@/types";
 
@@ -28,27 +28,58 @@ async function getStats() {
   }
 }
 
+const card: CSSProperties = {
+  background: "var(--bg-surface)",
+  border: "1px solid var(--border-default)",
+  borderRadius: "var(--radius-card)",
+  boxShadow: "var(--shadow-card)",
+};
+
+function KpiCard({
+  label,
+  value,
+  sub,
+  accent,
+}: {
+  label: string;
+  value: string | number;
+  sub?: string;
+  accent: string;
+}) {
+  return (
+    <div style={{ ...card, padding: "18px 20px", borderLeft: `4px solid ${accent}` }}>
+      <p className="t-caption" style={{ margin: 0, marginBottom: 8 }}>{label}</p>
+      <p className="mono" style={{ margin: 0, fontSize: 28, fontWeight: 700, color: accent }}>
+        {value}
+      </p>
+      {sub && <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--text-tertiary)" }}>{sub}</p>}
+    </div>
+  );
+}
+
 export default async function DashboardPage() {
   const stats = await getStats();
 
   return (
-    <div className="p-8 space-y-8">
+    <div style={{ padding: 32, display: "flex", flexDirection: "column", gap: 20, maxWidth: 1120 }}>
       <div>
-        <h1 className="text-xl font-semibold text-slate-100">Dashboard</h1>
-        <p className="text-slate-400 text-sm mt-0.5">Live status across fraud · bank ops · rate limits</p>
+        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: "var(--text-primary)" }}>Dashboard</h1>
+        <p style={{ margin: "3px 0 0", fontSize: 13, color: "var(--text-secondary)" }}>
+          Live status across fraud · bank ops · rate limits
+        </p>
       </div>
 
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <KpiCard label="Fraud Holds" value={stats.heldCount} sub="transactions awaiting review" accent="amber" />
-        <KpiCard label="Open Cases" value={stats.openCases} sub="support cases open" accent="blue" />
-        <KpiCard label="SLA Risk" value={stats.slaRisk} sub="due within 2 hours" accent="red" />
-        <KpiCard label="High Severity" value={stats.highSev} sub="HIGH or CRITICAL cases" accent="red" />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+        <KpiCard label="Fraud Holds" value={stats.heldCount} sub="transactions awaiting review" accent="var(--txn-held)" />
+        <KpiCard label="Open Cases" value={stats.openCases} sub="support cases open" accent="var(--txn-released)" />
+        <KpiCard label="SLA Risk" value={stats.slaRisk} sub="due within 2 hours" accent="var(--txn-rejected)" />
+        <KpiCard label="High Severity" value={stats.highSev} sub="HIGH or CRITICAL cases" accent="var(--sev-critical)" />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <section className="bg-slate-800 rounded-lg p-5 space-y-3">
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Services</h2>
-          <div className="space-y-2 text-sm">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
+        <section style={{ ...card, padding: "18px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+          <h2 className="t-caption" style={{ margin: 0 }}>Services</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 13 }}>
             {[
               { name: "Fluxa Query", port: "8083" },
               { name: "Fluxa Fraud gRPC", port: "9095" },
@@ -56,17 +87,20 @@ export default async function DashboardPage() {
               { name: "Prometheus", port: "9090" },
               { name: "Grafana", port: "3000" },
             ].map(({ name, port }) => (
-              <div key={name} className="flex items-center justify-between text-slate-300">
+              <div
+                key={name}
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", color: "var(--text-secondary)" }}
+              >
                 <span>{name}</span>
-                <span className="text-slate-500 font-mono text-xs">:{port}</span>
+                <span className="mono" style={{ color: "var(--text-tertiary)", fontSize: 12 }}>:{port}</span>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="bg-slate-800 rounded-lg p-5 space-y-3">
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Quick Links</h2>
-          <div className="space-y-2 text-sm">
+        <section style={{ ...card, padding: "18px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+          <h2 className="t-caption" style={{ margin: 0 }}>Quick Links</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 13 }}>
             {[
               { label: "Fraud Feed (live SSE)", href: "/fraud-feed" },
               { label: "HELD Transactions", href: "/fraud-review" },
@@ -74,7 +108,11 @@ export default async function DashboardPage() {
               { label: "Rate Limit Telemetry", href: "/rate-limits" },
               { label: "Grafana Dashboard", href: "http://localhost:3000" },
             ].map(({ label, href }) => (
-              <a key={label} href={href} className="block text-amber-400 hover:text-amber-300 transition-colors">
+              <a
+                key={label}
+                href={href}
+                style={{ display: "block", color: "var(--brand-primary)", fontWeight: 500, textDecoration: "none" }}
+              >
                 {label} →
               </a>
             ))}
