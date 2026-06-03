@@ -24,18 +24,26 @@ export async function fetchOpenCases() {
   return { content: Array.isArray(d) ? d : d.content ?? [] };
 }
 
-export async function releaseTransaction(accountId: number, txnId: number) {
+// BankOps release/reject accept an optional ReviewTransactionRequest body
+// ({ actorId, notes }) that feeds the audit timeline. Send the reviewer + reason
+// instead of an empty body so the decision is attributable and the reason persists.
+export interface ReviewBody {
+  actorId?: string;
+  notes?: string;
+}
+
+export async function releaseTransaction(accountId: number, txnId: number, review?: ReviewBody) {
   const res = await fetch(
     `${BANKOPS_BASE}/accounts/${accountId}/transactions/${txnId}/release`,
-    { method: "POST", headers: { "Content-Type": "application/json" } }
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(review ?? {}) }
   );
   if (!res.ok) throw new Error(`Release failed: ${res.status}`);
 }
 
-export async function rejectTransaction(accountId: number, txnId: number) {
+export async function rejectTransaction(accountId: number, txnId: number, review?: ReviewBody) {
   const res = await fetch(
     `${BANKOPS_BASE}/accounts/${accountId}/transactions/${txnId}/reject`,
-    { method: "POST", headers: { "Content-Type": "application/json" } }
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(review ?? {}) }
   );
   if (!res.ok) throw new Error(`Reject failed: ${res.status}`);
 }

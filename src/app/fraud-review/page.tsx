@@ -17,6 +17,10 @@ interface Signal {
   updatedAgo: string;
 }
 
+// The console has no authenticated user; attribute decisions to the console
+// itself so the BankOps audit timeline records provenance instead of null.
+const CONSOLE_ACTOR = "trifecta-console";
+
 interface HeldItem {
   id: string;
   accountId?: number;
@@ -815,11 +819,15 @@ export default function FraudReviewPage() {
     if (!selected) return;
     setModal(null);
     if (type === "release") {
-      releaseTransaction(selected.accountId ?? 1, parseInt(selected.id)).catch(() => {});
+      const notes = typeof payload.note === "string" && payload.note.trim() ? payload.note.trim() : undefined;
+      releaseTransaction(selected.accountId ?? 1, parseInt(selected.id), { actorId: CONSOLE_ACTOR, notes }).catch(() => {});
       setHelds((prev) => prev.filter((h) => h.id !== selected.id));
       setToast({ kind: "done", title: "Transaction released", body: `${selected.txnId} · customer notified.` });
     } else if (type === "reject") {
-      rejectTransaction(selected.accountId ?? 1, parseInt(selected.id)).catch(() => {});
+      const notes = [payload.reason, payload.note]
+        .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+        .join(" — ") || undefined;
+      rejectTransaction(selected.accountId ?? 1, parseInt(selected.id), { actorId: CONSOLE_ACTOR, notes }).catch(() => {});
       setHelds((prev) => prev.filter((h) => h.id !== selected.id));
       setToast({ kind: "done", title: "Transaction rejected", body: `${selected.txnId} · ${payload.reason || "reason logged"}.` });
     } else if (type === "escalate") {
